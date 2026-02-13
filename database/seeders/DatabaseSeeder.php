@@ -15,15 +15,20 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
+        require_once __DIR__ . '/MasterDataSeeder.php';
+        require_once __DIR__ . '/StandardTestDataSeeder.php';
+
         $this->call([
-            TitleSeeder::class,
-            UserSeeder::class,
-            // User::factory(10)->create(),
+            // 1. Master Data (Cấu hình hệ thống)
+            MasterDataSeeder::class,
+
+            // 2. Test Data (Dữ liệu mẫu 50 người)
+            StandardTestDataSeeder::class,
         ]);
 
-        User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
-        ]);
+        // User::factory()->create([
+        //     'name' => 'Test User',
+        //     'email' => 'test@example.com',
+        // ]);
     }
 }
