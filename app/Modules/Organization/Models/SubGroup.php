@@ -4,6 +4,7 @@ namespace App\Modules\Organization\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Modules\Membership\Models\Member;
 
 class SubGroup extends Model
 {

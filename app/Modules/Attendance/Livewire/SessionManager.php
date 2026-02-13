@@ -43,6 +43,25 @@ class SessionManager extends Component
     public $search = '';
     public $filterDepartment = '';
     public $activeTab = 'info'; // info, assignments
+    public $selectedMonth; // Y-m
+
+    public function getAvailableMonthsProperty()
+    {
+        $months = [];
+        $currentDate = now()->addMonths(6); // Future 6 months
+        $endDate = now()->subYear(); // Past 1 year
+
+        while ($currentDate >= $endDate) {
+            $value = $currentDate->format('Y-m');
+            $label = "Tháng " . $currentDate->format('m/Y');
+            if ($currentDate->isCurrentMonth()) {
+                $label .= " (Hiện tại)";
+            }
+            $months[$value] = $label;
+            $currentDate->subMonth();
+        }
+        return $months;
+    }
 
     protected function rules()
     {
@@ -61,15 +80,37 @@ class SessionManager extends Component
 
     public function mount()
     {
+        $this->selectedMonth = now()->format('Y-m');
         $this->loadData();
         $this->speakers = Speaker::orderBy('name')->get();
-        $this->members = Member::orderBy('name')->get();
+        // Initial load - load all or empty? Let's load all for now to be safe, 
+        // or effectively we should trigger loadMembers based on defaults.
+        $this->members = Member::orderBy('full_name')->get();
         $this->departments = Department::where('type', 'Sinh hoạt')->orderBy('name')->get();
         $this->date = now()->format('Y-m-d');
     }
 
+    public function updatedDepartmentId()
+    {
+        $this->loadMembers();
+    }
+
+    public function loadMembers()
+    {
+        if ($this->department_id) {
+            $this->members = Member::whereHas('departments', function ($q) {
+                $q->where('departments.id', $this->department_id);
+            })->orderBy('full_name')->get();
+        } else {
+            // Optional: Filter by 'Sinh hoạt' only if no specific dept? 
+            // Or just all members?
+            $this->members = Member::orderBy('full_name')->get();
+        }
+    }
+
     public function loadData()
     {
+        // ... existing loadData code ...
         $query = AttendanceSession::with(['department', 'speaker', 'mc', 'assignments.member']);
 
         if ($this->search) {
@@ -83,9 +124,16 @@ class SessionManager extends Component
             $query->where('department_id', $this->filterDepartment);
         }
 
-        $this->sessions = $query->orderBy('date', 'desc')->take(50)->get();
-    }
+        if ($this->selectedMonth) {
+            $year = substr($this->selectedMonth, 0, 4);
+            $month = substr($this->selectedMonth, 5, 2);
+            $query->whereYear('date', $year)
+                  ->whereMonth('date', $month);
+        }
 
+        $this->sessions = $query->orderBy('date', 'desc')->get();
+    }
+    
     public function render()
     {
         $rolesByCategory = MinistryRole::getRolesByCategory();
@@ -109,6 +157,10 @@ class SessionManager extends Component
         $this->date = $session->date->format('Y-m-d');
         $this->name = $session->name;
         $this->department_id = $session->department_id;
+        
+        // Trigger member load based on the session's department
+        $this->loadMembers();
+
         $this->topic = $session->topic;
         $this->main_scripture = $session->main_scripture;
         $this->key_verse = $session->key_verse;
@@ -239,6 +291,11 @@ class SessionManager extends Component
     }
 
     public function updatedFilterDepartment()
+    {
+        $this->loadData();
+    }
+
+    public function updatedSelectedMonth()
     {
         $this->loadData();
     }

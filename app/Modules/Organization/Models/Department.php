@@ -28,6 +28,16 @@ class Department extends Model
     /**
      * Get all sub-groups for this department.
      */
+    public function members()
+    {
+        return $this->belongsToMany(\App\Modules\Membership\Models\Member::class, 'department_member')
+            ->withPivot('role', 'sub_group_id')
+            ->withTimestamps();
+    }
+
+    /**
+     * Get all sub-groups for this department.
+     */
     public function subGroups()
     {
         return $this->hasMany(SubGroup::class);

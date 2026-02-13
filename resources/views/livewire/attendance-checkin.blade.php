@@ -1,58 +1,76 @@
-<div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+<div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
     {{-- Header --}}
-    <div class="mb-6">
-        <div class="flex items-center justify-between mb-2">
-            <div class="flex items-center gap-2">
-                <a href="{{ route('attendance.dashboard') }}" class="text-gray-500 hover:text-gray-700">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                    </svg>
-                </a>
-                <h1 class="text-xl font-bold text-gray-900">{{ $session->name ?? $session->type }}</h1>
+    <div class="flex flex-col md:flex-row md:justify-between md:items-center mb-6 gap-4">
+        <div class="flex items-center gap-3">
+            <a href="{{ route('attendance.dashboard') }}" class="p-2 rounded-full hover:bg-gray-100 text-gray-500 transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                </svg>
+            </a>
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900">{{ $session->name ?? $session->type }}</h1>
+                <p class="text-sm text-gray-500">{{ $session->date->format('d/m/Y') }}</p>
             </div>
-            
+        </div>
+        
+        <div class="flex items-center gap-3">
             @if(Auth::user()->isSecretary())
                 @if($session->status === 'locked')
-                    <span class="inline-flex items-center px-3 py-0.5 rounded-full text-sm font-medium bg-red-100 text-red-800">
-                        Đã Khóa Sổ
-                    </span>
+                    <div class="flex items-center gap-2">
+                        <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800 border border-red-200">
+                            <svg class="-ml-0.5 mr-1.5 h-4 w-4 text-red-500" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm-1-11a1 1 0 112 0v2H9V7zm1 4a1 1 0 100 2 1 1 0 000-2z" clip-rule="evenodd"/>
+                            </svg>
+                            Đã Khóa Sổ
+                        </span>
+                        <button wire:click="unlockSession" 
+                                wire:confirm="Bạn có muốn mở khóa buổi điểm danh này?"
+                                class="inline-flex items-center px-3 py-1 border border-gray-300 text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 shadow-sm transition-colors">
+                            Mở khóa
+                        </button>
+                    </div>
                 @else
                     <button wire:click="lockSession" 
                             wire:confirm="Bạn có chắc chắn muốn khóa sổ buổi điểm danh này? Sau khi khóa sẽ không thể chỉnh sửa."
-                            class="inline-flex items-center px-3 py-1 border border-transparent text-sm leading-4 font-medium rounded-md text-red-700 bg-red-100 hover:bg-red-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
+                            class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-red-700 bg-red-50 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors">
+                        <svg class="-ml-1 mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                        </svg>
                         Khóa sổ
                     </button>
                 @endif
             @endif
         </div>
-        <p class="text-sm text-gray-500 ml-8">{{ $session->date->format('d/m/Y') }}</p>
-        
-        @if($session->status === 'locked')
-            <div class="mt-4 bg-yellow-50 border-l-4 border-yellow-400 p-4">
-                <div class="flex">
-                    <div class="flex-shrink-0">
-                        <svg class="h-5 w-5 text-yellow-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                            <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
-                        </svg>
-                    </div>
-                    <div class="ml-3">
-                        <p class="text-sm text-yellow-700">
-                            Buổi điểm danh này đã bị khóa. Bạn chỉ có thể xem số liệu.
-                        </p>
-                    </div>
-                </div>
-            </div>
-        @endif
     </div>
 
-    {{-- Department Selector --}}
-    <div class="mb-6">
-        <label for="department" class="block text-sm font-medium text-gray-700 mb-1">Ban Ngành</label>
-        <select wire:model.live="selectedDepartmentId" id="department" class="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
-            @foreach($departments as $dept)
-                <option value="{{ $dept->id }}">{{ $dept->name }}</option>
-            @endforeach
-        </select>
+    @if($session->status === 'locked')
+        <div class="mb-6 bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-r-lg">
+            <div class="flex">
+                <div class="flex-shrink-0">
+                    <svg class="h-5 w-5 text-yellow-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+                    </svg>
+                </div>
+                <div class="ml-3">
+                    <p class="text-sm text-yellow-700">
+                        Buổi điểm danh này đã bị khóa. Bạn chỉ có thể xem số liệu.
+                    </p>
+                </div>
+            </div>
+        </div>
+    @endif
+
+    {{-- Department Selector Area --}}
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
+        <label for="department" class="block text-sm font-medium text-gray-700 mb-2">Chọn Ban Ngành để điểm danh</label>
+        <div class="relative">
+            <select wire:model.live="selectedDepartmentId" id="department" 
+                    class="block w-full pl-4 pr-10 py-3 text-base border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-lg shadow-sm transition-shadow">
+                @foreach($departments as $dept)
+                    <option value="{{ $dept->id }}">{{ $dept->name }}</option>
+                @endforeach
+            </select>
+        </div>
     </div>
 
     {{-- Tabs --}}

@@ -10,11 +10,15 @@ use Illuminate\Support\Facades\Auth;
 
 class AttendanceDashboard extends Component
 {
-    public $sessions;
+    public $sessions; // Can be used for the list if needed, or we use computed
+    public $availableSessions = []; // For the dropdown
     
     // Context Switching
     public $manageableDepartments = [];
     public $selectedDepartmentId = null;
+    public $selectedMonth; // Y-m
+    public $selectedSessionId = null;
+    public $currentSession = null; // The selected session object
 
     // Slide-over Props
     public $showSlideOver = false;
@@ -33,8 +37,25 @@ class AttendanceDashboard extends Component
     // Manual Count Entry (Secretary only)
     public $manualCounts = [];
 
+    public function getAvailableMonthsProperty()
+    {
+        $months = [];
+        $currentDate = now()->addMonths(2); // Start from 2 months ahead
+        $endDate = now()->subYear(); // Go back 1 year
+
+        while ($currentDate >= $endDate) {
+            $value = $currentDate->format('Y-m');
+            $label = "Tháng " . $currentDate->format('m/Y');
+            $months[$value] = $label;
+            $currentDate->subMonth();
+        }
+        return $months;
+    }
+
     public function mount()
     {
+        $this->selectedMonth = now()->format('Y-m');
+
         // 1. Load Manageable Departments (Only 'Sinh hoạt')
         $query = Department::where('type', 'Sinh hoạt')->orderBy('name');
 
@@ -55,41 +76,54 @@ class AttendanceDashboard extends Component
             $this->selectedDepartmentId = $this->manageableDepartments->first()->id;
         }
 
-        $this->loadSessions();
+        $this->loadAvailableSessions();
         $this->newSessionDate = now()->format('Y-m-d');
         $this->bulkStartDate = now()->format('Y-m-d');
         $this->bulkEndDate = now()->addMonth()->format('Y-m-d');
     }
 
-    public function selectDepartment($deptId)
+    public function updatedSelectedDepartmentId()
     {
-        $this->selectedDepartmentId = $deptId;
-        $this->loadSessions();
+        $this->selectedSessionId = null;
+        $this->currentSession = null;
+        $this->loadAvailableSessions();
     }
 
-    public function loadSessions()
+    public function updatedSelectedMonth()
     {
+        $this->selectedSessionId = null;
+        $this->currentSession = null;
+        $this->loadAvailableSessions();
+    }
+
+    public function updatedSelectedSessionId($value)
+    {
+        if ($value) {
+            $this->currentSession = AttendanceSession::withSum('summaries', 'total_present')->find($value);
+            if ($this->currentSession) {
+                $this->manualCounts[$this->currentSession->id] = $this->currentSession->manual_count;
+            }
+        } else {
+            $this->currentSession = null;
+        }
+    }
+
+    public function loadAvailableSessions()
+    {
+        if (!$this->selectedMonth) {
+            $this->availableSessions = [];
+            return;
+        }
+
+        $year = substr($this->selectedMonth, 0, 4);
+        $month = substr($this->selectedMonth, 5, 2);
+
         // ONLY Sunday Services
-        $query = AttendanceSession::withSum('summaries', 'total_present')
-            ->where('type', 'sunday_service')
+        $query = AttendanceSession::where('type', 'sunday_service')
+            ->whereYear('date', $year)
+            ->whereMonth('date', $month)
             ->latest('date');
 
-        // Logic: 
-        // Sunday Services are usually Global (department_id = null).
-        // If they are specific to a department (rare for Sunday Service in this context), we filter.
-        // But usually "Hội thánh" means Global.
-        
-        // If a department is selected, maybe we want to see if that department has "checked in" for that service?
-        // But the SESSION itself is the parent.
-        // So we probably don't filter the session list by department_id unless the session belongs to a department.
-
-        // Let's assume Sunday Services are Global.
-        // So we show ALL sunday_services regardless of selected department.
-        // The selected department might be used for "Entering Count" context later.
-        
-        // However, if the user created "Sunday Service" for "Youth Group" specifically?
-        // Let's allow filtering if the session has a department_id.
-        
         if ($this->selectedDepartmentId) {
              $query->where(function($q) {
                  $q->whereNull('department_id') // Global
@@ -97,12 +131,10 @@ class AttendanceDashboard extends Component
              });
         }
 
-        $this->sessions = $query->take(20)->get();
-        
-        foreach ($this->sessions as $session) {
-            $this->manualCounts[$session->id] = $session->manual_count;
-        }
+        $this->availableSessions = $query->get();
     }
+    
+    // Removed old loadSessions() as we filter mainly for dropdown now
 
     public function openSlideOver()
     {

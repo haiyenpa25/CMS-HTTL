@@ -33,21 +33,24 @@ class AttendanceCheckin extends Component
     {
         $this->session = AttendanceSession::findOrFail($sessionId);
         
-        $manageableIds = Auth::user()->getManageableDepartmentIds();
-        $this->departments = Department::whereIn('id', $manageableIds)->get();
+        // Load Departments (Only 'Sinh hoạt')
+        $query = Department::where('type', 'Sinh hoạt')->orderBy('name');
+
+        if (!Auth::user()->hasRole('super-admin') && !Auth::user()->hasRole('admin')) {
+             $manageableIds = Auth::user()->getManageableDepartmentIds();
+             if (!empty($manageableIds)) {
+                 $query->whereIn('id', $manageableIds);
+             } else {
+                 // No access
+                 $query->whereRaw('1 = 0');
+             }
+        }
+        
+        $this->departments = $query->get();
         
         if ($this->departments->isNotEmpty()) {
             $this->selectedDepartmentId = $this->departments->first()->id;
-            
-            // Check access for the default selected
-             \Illuminate\Support\Facades\Gate::authorize('manage-department', $this->selectedDepartmentId);
-             
             $this->loadQuickAddData();
-        } else {
-            // Check if user has explicit assignment to a SubGroup but maybe confusing UI here
-            // For now, if no department assignment, show empty or error?
-            // User might be a super admin with no specific assignment but getManageable returns getAll.
-            // If empty, it means they have no access.
         }
     }
 
@@ -113,44 +116,70 @@ class AttendanceCheckin extends Component
             'member_id' => $memberId,
         ]);
 
+        $oldDepartmentId = $attendance->exists ? $attendance->department_id : null;
+
         if (!$attendance->exists) {
-            $attendance->department_id = $this->selectedDepartmentId; // Snapshot
-            // Default other fields false
+            $attendance->department_id = $this->selectedDepartmentId;
             $attendance->$field = true;
         } else {
             $attendance->$field = !$attendance->$field;
+            // If we are interacting with this member in this department context, 
+            // we should probably attribute them to this department now?
+            // Yes, to ensure "Total Present" for this department includes them 
+            // if they are marked present here.
+            $attendance->department_id = $this->selectedDepartmentId;
         }
 
         $attendance->save();
         
-        // Update Summary automatically when Detail is used
-        $this->recalculateSummary();
+        // Recalculate This Department
+        $this->recalculateSummary($this->selectedDepartmentId);
+
+        // Recalculate Old Department if different
+        if ($oldDepartmentId && $oldDepartmentId !== $this->selectedDepartmentId) {
+            $this->recalculateSummary($oldDepartmentId);
+        }
     }
     
     protected function updateAttendance($memberId, $data)
     {
-        $attendance = Attendance::updateOrCreate(
+        // For mass updates or specific logic (not used heavily in toggle)
+        // But let's check safety
+         $attendance = Attendance::where('attendance_session_id', $this->session->id)
+            ->where('member_id', $memberId)
+            ->first();
+            
+         $oldDepartmentId = $attendance ? $attendance->department_id : null;
+
+         $attendance = Attendance::updateOrCreate(
             [
                 'attendance_session_id' => $this->session->id,
                 'member_id' => $memberId,
             ],
             array_merge($data, ['department_id' => $this->selectedDepartmentId])
         );
-        $this->recalculateSummary();
+
+        $this->recalculateSummary($this->selectedDepartmentId);
+        
+        if ($oldDepartmentId && $oldDepartmentId !== $this->selectedDepartmentId) {
+            $this->recalculateSummary($oldDepartmentId);
+        }
     }
 
-    protected function recalculateSummary()
+    protected function recalculateSummary($departmentId)
     {
+        if (!$departmentId) return;
+
         // Count total present for this session + dept
         $count = Attendance::where('attendance_session_id', $this->session->id)
-            ->where('department_id', $this->selectedDepartmentId)
+            ->where('department_id', $departmentId)
             ->where('is_present', true)
             ->count();
             
         AttendanceSummary::updateOrCreate(
             [
                 'attendance_session_id' => $this->session->id,
-                'department_id' => $this->selectedDepartmentId,
+                'department_id' => $departmentId,
             ],
             [
                 'total_present' => $count,
@@ -158,7 +187,10 @@ class AttendanceCheckin extends Component
             ]
         );
         
-        $this->quickAddCount = $count;
+        // Only update local quick count if it's the CURRENTLY viewed department
+        if ($departmentId == $this->selectedDepartmentId) {
+            $this->quickAddCount = $count;
+        }
     }
 
     public function saveQuickAdd()
@@ -194,6 +226,16 @@ class AttendanceCheckin extends Component
 
         $this->session->update(['status' => 'locked']);
         session()->flash('message', 'Đã khóa sổ buổi điểm danh này. Không thể chỉnh sửa.');
+    }
+
+    public function unlockSession()
+    {
+        if (!Auth::user()->isSecretary()) {
+            return;
+        }
+
+        $this->session->update(['status' => 'open']);
+        session()->flash('message', 'Đã mở khóa buổi điểm danh.');
     }
 
     public function render()

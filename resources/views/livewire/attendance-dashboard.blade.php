@@ -1,116 +1,155 @@
 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-    <div class="flex justify-between items-center mb-6">
-        <h1 class="text-2xl font-bold text-gray-900">Điểm danh & Sỉ số</h1>
+    <div class="flex flex-col md:flex-row md:justify-between md:items-center mb-6 gap-4">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900">Điểm danh & Sỉ số</h1>
+            <p class="text-sm text-gray-500 mt-1">Quản lý điểm danh cho các buổi lễ chung</p>
+        </div>
         @if(auth()->user()->isSecretary())
-            <button wire:click="openSlideOver" class="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700">
+            <button wire:click="openSlideOver" class="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 shadow-sm transition-colors">
                 + Tạo buổi điểm danh
             </button>
         @endif
     </div>
 
     @if (session()->has('success'))
-        <div class="bg-green-50 text-green-700 p-4 rounded-lg mb-4 text-sm">
+        <div class="bg-green-50 text-green-700 p-4 rounded-lg mb-6 text-sm border border-green-200">
             {{ session('success') }}
         </div>
     @endif
     
     @if (session()->has('error'))
-        <div class="bg-red-50 text-red-700 p-4 rounded-lg mb-4 text-sm">
+        <div class="bg-red-50 text-red-700 p-4 rounded-lg mb-6 text-sm border border-red-200">
             {{ session('error') }}
         </div>
     @endif
 
-    <!-- Context Switching Cards -->
-    @if(count($manageableDepartments) > 1)
-        <div class="mb-6">
-            <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Chọn Ban Ngành Quản Lý</h2>
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <button wire:click="selectDepartment(null)" 
-                        class="p-4 rounded-lg border text-left transition-shadow hover:shadow-md {{ is_null($selectedDepartmentId) ? 'bg-indigo-50 border-indigo-500 ring-2 ring-indigo-200' : 'bg-white border-gray-200' }}">
-                    <div class="font-bold {{ is_null($selectedDepartmentId) ? 'text-indigo-700' : 'text-gray-900' }}">Tất cả (Chung)</div>
-                    <div class="text-xs text-gray-500 mt-1">Xem lịch chung của Hội Thánh</div>
-                </button>
-                @foreach($manageableDepartments as $dept)
-                    <button wire:click="selectDepartment({{ $dept->id }})" 
-                            class="p-4 rounded-lg border text-left transition-shadow hover:shadow-md {{ $selectedDepartmentId == $dept->id ? 'bg-indigo-50 border-indigo-500 ring-2 ring-indigo-200' : 'bg-white border-gray-200' }}">
-                        <div class="font-bold {{ $selectedDepartmentId == $dept->id ? 'text-indigo-700' : 'text-gray-900' }}">{{ $dept->name }}</div>
-                        <div class="text-xs text-gray-500 mt-1">Quản lý điểm danh</div>
-                    </button>
-                @endforeach
+    {{-- Toolbar / Filters --}}
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4 md:p-6 mb-6">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {{-- Department Selector --}}
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                    Ban ngành
+                </label>
+                <select 
+                    wire:model.live="selectedDepartmentId"
+                    class="w-full px-4 py-2.5 border border-gray-300 rounded-lg bg-white text-gray-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors shadow-sm"
+                >
+                    <option value="">-- Tất cả (Chung) --</option>
+                    @foreach($manageableDepartments as $dept)
+                    <option value="{{ $dept->id }}">{{ $dept->name }}</option>
+                    @endforeach
+                </select>
+            </div>
+
+            {{-- Month Selector --}}
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                    Tháng <span class="text-red-500">*</span>
+                </label>
+                <select 
+                    wire:model.live="selectedMonth"
+                    class="w-full px-4 py-2.5 border border-gray-300 rounded-lg bg-white text-gray-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors shadow-sm"
+                >
+                    @foreach($this->availableMonths as $value => $label)
+                        <option value="{{ $value }}">{{ $label }}</option>
+                    @endforeach
+                </select>
+            </div>
+
+            {{-- Session Selector --}}
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                    Buổi nhóm <span class="text-red-500">*</span>
+                </label>
+                <select 
+                    wire:model.live="selectedSessionId"
+                    {{ !$selectedMonth ? 'disabled' : '' }}
+                    class="w-full px-4 py-2.5 border border-gray-300 rounded-lg bg-white text-gray-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors disabled:bg-gray-100 disabled:cursor-not-allowed shadow-sm"
+                >
+                    <option value="">-- Chọn buổi nhóm --</option>
+                    @foreach($availableSessions as $session)
+                    <option value="{{ $session->id }}">
+                        {{ $session->name }} ({{ $session->date->format('d/m/Y') }})
+                    </option>
+                    @endforeach
+                </select>
             </div>
         </div>
-    @endif
-
-    <div class="bg-white shadow rounded-lg overflow-hidden">
-        <table class="min-w-full divide-y divide-gray-200">
-            <thead class="bg-gray-50">
-                <tr>
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ngày / Buổi nhóm</th>
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Trạng thái</th>
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tổng điểm danh</th>
-                    @if(auth()->user()->isSecretary())
-                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Đếm thực tế</th>
-                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Chênh lệch</th>
-                    @endif
-                    <th scope="col" class="relative px-6 py-3">
-                        <span class="sr-only">Hành động</span>
-                    </th>
-                </tr>
-            </thead>
-            <tbody class="bg-white divide-y divide-gray-200">
-                @foreach ($sessions as $session)
-                    <tr>
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <div class="text-sm font-medium text-gray-900">
-                                {{ $session->date->format('d/m/Y') }}
-                            </div>
-                            <div class="text-sm text-gray-500">
-                                {{ $session->name ?? ($session->type == 'sunday_service' ? 'Thờ phượng Chúa nhật' : $session->type) }}
-                            </div>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full {{ $session->status === 'open' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800' }}">
-                                {{ $session->status === 'open' ? 'Đang mở' : 'Đã đóng' }}
-                            </span>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-bold">
-                            <!-- Helper: withSum puts it in summaries_sum_total_present -->
-                            {{ $session->summaries_sum_total_present ?? 0 }}
-                        </td>
-                        @if(auth()->user()->isSecretary())
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <input type="number" 
-                                       wire:model="manualCounts.{{ $session->id }}" 
-                                       wire:blur="updateManualCount({{ $session->id }})"
-                                       class="w-20 text-sm border-gray-300 rounded-md shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
-                                       {{ $session->status === 'locked' ? 'disabled' : '' }}
-                                >
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm">
-                                @php
-                                    $sys = $session->summaries_sum_total_present ?? 0;
-                                    $manual = $manualCounts[$session->id] ?? 0;
-                                    $diff = $sys - $manual;
-                                @endphp
-                                @if($manual > 0)
-                                    <span class="{{ $diff === 0 ? 'text-green-600' : 'text-red-600 font-bold' }}">
-                                        {{ $diff > 0 ? '+' . $diff : $diff }}
-                                    </span>
-                                @else
-                                    <span class="text-gray-400">-</span>
-                                @endif
-                            </td>
-                        @endif
-                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                            <a href="{{ route('attendance.checkin', $session->id) }}" class="text-indigo-600 hover:text-indigo-900 bg-indigo-50 px-3 py-1 rounded-md">
-                                Điểm danh
-                            </a>
-                        </td>
-                    </tr>
-                @endforeach
-            </tbody>
-        </table>
+        
+        @if(!$selectedSessionId)
+        <div class="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-3">
+            <div class="flex items-start gap-2">
+                <svg class="w-5 h-5 text-blue-600 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                <p class="text-sm text-blue-800">
+                    Vui lòng chọn <strong>Buổi nhóm</strong> để xem chi tiết và thực hiện điểm danh.
+                </p>
+            </div>
+        </div>
+        @endif
     </div>
+
+    @if($currentSession)
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+            <div>
+                <h3 class="text-lg font-bold text-gray-900">{{ $currentSession->name ?: 'Thờ phượng Chúa nhật' }}</h3>
+                <p class="text-sm text-gray-500">{{ $currentSession->date->format('d/m/Y') }} — {{ $currentSession->status === 'open' ? 'Đang mở' : 'Đã đóng' }}</p>
+            </div>
+            <div>
+                <a href="{{ route('attendance.checkin', $currentSession->id) }}" class="inline-flex items-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors">
+                    <svg class="-ml-1 mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/>
+                    </svg>
+                    Điểm danh ngay
+                </a>
+            </div>
+        </div>
+        
+        <div class="p-6">
+            <dl class="grid grid-cols-1 gap-5 sm:grid-cols-3">
+                <div class="px-4 py-5 bg-white shadow-sm rounded-lg overflow-hidden sm:p-6 border border-gray-100">
+                    <dt class="text-sm font-medium text-gray-500 truncate">Hệ thống ghi nhận</dt>
+                    <dd class="mt-1 text-3xl font-semibold text-gray-900">{{ $currentSession->summaries_sum_total_present ?? 0 }}</dd>
+                </div>
+
+                @if(auth()->user()->isSecretary())
+                <div class="px-4 py-5 bg-white shadow-sm rounded-lg overflow-hidden sm:p-6 border border-gray-100">
+                    <dt class="text-sm font-medium text-gray-500 truncate">Đếm thực tế</dt>
+                    <dd class="mt-1">
+                        <input type="number" 
+                               wire:model="manualCounts.{{ $currentSession->id }}" 
+                               wire:blur="updateManualCount({{ $currentSession->id }})"
+                               class="block w-full text-2xl font-semibold border-0 border-b-2 border-gray-200 focus:border-indigo-500 focus:ring-0 px-0 py-1"
+                               {{ $currentSession->status === 'locked' ? 'disabled' : '' }}
+                        >
+                    </dd>
+                </div>
+
+                <div class="px-4 py-5 bg-white shadow-sm rounded-lg overflow-hidden sm:p-6 border border-gray-100">
+                    <dt class="text-sm font-medium text-gray-500 truncate">Chênh lệch</dt>
+                    <dd class="mt-1 text-3xl font-semibold">
+                        @php
+                            $sys = (int) ($currentSession->summaries_sum_total_present ?? 0);
+                            $manual = (int) ($manualCounts[$currentSession->id] ?? 0);
+                            $diff = $sys - $manual;
+                        @endphp
+                        @if($manual > 0)
+                            <span class="{{ $diff === 0 ? 'text-green-600' : 'text-red-600' }}">
+                                {{ $diff > 0 ? '+' . $diff : $diff }}
+                            </span>
+                        @else
+                            <span class="text-gray-400">-</span>
+                        @endif
+                    </dd>
+                </div>
+                @endif
+            </dl>
+        </div>
+    </div>
+    @endif
 
     {{-- Slide-over Panel --}}
     <div x-data="{ open: @entangle('showSlideOver') }" 

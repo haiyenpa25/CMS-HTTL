@@ -19,7 +19,7 @@
 
     {{-- Filters & Search --}}
     <div class="mb-6 rounded-2xl bg-white p-6 shadow-lg border border-slate-100">
-        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <div class="relative">
                 <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Tìm kiếm</label>
                 <div class="relative">
@@ -30,6 +30,14 @@
                         placeholder="Tên buổi nhóm, chủ đề..." 
                         class="pl-12 block w-full rounded-xl border-slate-200 bg-slate-50 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 text-sm font-medium transition-all">
                 </div>
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Tháng</label>
+                <select wire:model.live="selectedMonth" class="block w-full rounded-xl border-slate-200 bg-slate-50 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 text-sm font-medium transition-all">
+                    @foreach($this->availableMonths as $value => $label)
+                        <option value="{{ $value }}">{{ $label }}</option>
+                    @endforeach
+                </select>
             </div>
             <div>
                 <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Bộ phận</label>
@@ -84,7 +92,7 @@
                                 @if($session->mc)
                                     <div class="flex items-center gap-2 text-sm">
                                         <span class="material-symbols-outlined text-base text-green-500">mic</span>
-                                        <span class="font-medium text-slate-700">MC: {{ $session->mc->name }}</span>
+                                        <span class="font-medium text-slate-700">MC: {{ $session->mc->full_name }}</span>
                                     </div>
                                 @endif
                             </div>
@@ -99,7 +107,7 @@
                                         @foreach($session->assignments as $assignment)
                                             <span class="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-indigo-50 to-purple-50 px-3 py-1 text-xs font-bold text-indigo-700 border border-indigo-200">
                                                 <span class="material-symbols-outlined text-sm">person</span>
-                                                {{ $assignment->member->name }} - {{ $assignment->role_name }}
+                                                {{ $assignment->member->full_name }} - {{ $assignment->role_name }}
                                             </span>
                                         @endforeach
                                     </div>
@@ -255,11 +263,11 @@
                                                 </select>
                                             </div>
                                             <div>
-                                                <label class="block text-sm font-bold text-slate-700 mb-2">MC (Người dẫn)</label>
+                                                <label class="block text-sm font-bold text-slate-700 mb-2">Hướng dẫn chương trình</label>
                                                 <select wire:model="mc_id" class="block w-full rounded-xl border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 sm:text-sm">
-                                                    <option value="">Chọn MC...</option>
+                                                    <option value="">Chọn người hướng dẫn...</option>
                                                     @foreach($members as $member)
-                                                        <option value="{{ $member->id }}">{{ $member->name }}</option>
+                                                        <option value="{{ $member->id }}">{{ $member->full_name }}</option>
                                                     @endforeach
                                                 </select>
                                             </div>
@@ -283,7 +291,7 @@
                                                             <div>
                                                                 <span class="text-xs font-bold text-slate-500">Thành viên</span>
                                                                 <p class="text-sm font-bold text-slate-900">
-                                                                    {{ $members->firstWhere('id', $assignment['member_id'])?->name ?? 'N/A' }}
+                                                                    {{ $members->firstWhere('id', $assignment['member_id'])?->full_name ?? 'N/A' }}
                                                                 </p>
                                                             </div>
                                                             <div>
@@ -317,7 +325,7 @@
                                                     <select wire:model="newAssignment.member_id" class="block w-full rounded-xl border-slate-300 shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 sm:text-sm">
                                                         <option value="">Chọn thành viên...</option>
                                                         @foreach($members as $member)
-                                                            <option value="{{ $member->id }}">{{ $member->name }}</option>
+                                                            <option value="{{ $member->id }}">{{ $member->full_name }}</option>
                                                         @endforeach
                                                     </select>
                                                 </div>

@@ -15,6 +15,7 @@ class DepartmentAttendance extends Component
     public $selectedSessionId;
     public $selectedDepartmentId;
     public $selectedSubGroupId;
+    public $selectedMonth; // format: Y-m
     
     public $sessions = [];
     public $departments = [];
@@ -23,8 +24,25 @@ class DepartmentAttendance extends Component
     public $attendanceRecords = [];
     public $departmentFeatures = [];
 
+    public function getAvailableMonthsProperty()
+    {
+        $months = [];
+        $currentDate = now()->addMonths(2); // Start from 2 months ahead
+        $endDate = now()->subYear(); // Go back 1 year
+
+        while ($currentDate >= $endDate) {
+            $value = $currentDate->format('Y-m');
+            $label = "Tháng " . $currentDate->format('m/Y');
+            $months[$value] = $label;
+            $currentDate->subMonth();
+        }
+        return $months;
+    }
+
     public function mount()
     {
+        $this->selectedMonth = now()->format('Y-m');
+
         // Check permission
         $hasPermission = Auth::user()->assignments()
             ->whereJsonContains('allowed_features', 'group_attendance')
@@ -34,7 +52,6 @@ class DepartmentAttendance extends Component
             abort(403, 'Bạn không có quyền truy cập tính năng này');
         }
 
-        $this->loadUserDepartments();
         $this->loadUserDepartments();
     }
 
@@ -59,8 +76,6 @@ class DepartmentAttendance extends Component
         $this->departments = $query->get();
     }
 
-    // Removed loadSessions() from mount as it is now dependent on Department selection
-
     public function updatedSelectedDepartmentId($value)
     {
         $this->selectedSessionId = null;
@@ -71,16 +86,8 @@ class DepartmentAttendance extends Component
         $this->attendanceRecords = [];
 
         if ($value) {
-            $this->subGroups = SubGroup::where('department_id', $value)
-                ->orderBy('name')
-                ->get();
-            
-            // Load Sessions for this Department
-            $this->sessions = AttendanceSession::where('department_id', $value)
-                ->whereIn('type', ['department_meeting', 'active_group'])
-                ->orderBy('date', 'desc')
-                ->take(30)
-                ->get();
+            $this->loadSubGroups();
+            $this->loadSessions();
             
             // Load department features
             $dept = Department::find($value);
@@ -91,6 +98,39 @@ class DepartmentAttendance extends Component
                 'scripture_tracking' => $settings['scripture_tracking'] ?? true
             ];
         }
+    }
+
+    public function updatedSelectedMonth($value)
+    {
+        $this->selectedSessionId = null;
+        $this->sessions = [];
+        // Keep SubGroup selected as it doesn't depend on month
+        
+        if ($this->selectedDepartmentId) {
+            $this->loadSessions();
+        }
+    }
+
+    public function loadSubGroups()
+    {
+        $this->subGroups = SubGroup::where('department_id', $this->selectedDepartmentId)
+                ->orderBy('name')
+                ->get();
+    }
+
+    public function loadSessions()
+    {
+        if (!$this->selectedDepartmentId || !$this->selectedMonth) return;
+
+        $year = substr($this->selectedMonth, 0, 4);
+        $month = substr($this->selectedMonth, 5, 2);
+
+        $this->sessions = AttendanceSession::where('department_id', $this->selectedDepartmentId)
+            ->whereIn('type', ['department_meeting', 'active_group'])
+            ->whereYear('date', $year)
+            ->whereMonth('date', $month)
+            ->orderBy('date', 'desc')
+            ->get();
     }
 
     public function updatedSelectedSubGroupId($value)

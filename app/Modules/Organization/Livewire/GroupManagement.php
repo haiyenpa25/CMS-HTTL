@@ -2,11 +2,13 @@
 
 namespace App\Modules\Organization\Livewire;
 
-use App\Modules\Organization\Models\Group;
+use App\Modules\Organization\Models\Department;
 use App\Modules\Membership\Models\Member;
 use App\Modules\Organization\Models\SubGroup;
+use Livewire\Attributes\Layout;
 use Livewire\Component;
 
+#[Layout('layouts.app')]
 class GroupManagement extends Component
 {
     public $editingGroup;
@@ -33,7 +35,7 @@ class GroupManagement extends Component
 
     public function getGroupsProperty()
     {
-        return Group::with(['subGroups.leader', 'members'])->get(); // Eager load relationships
+        return Department::with(['subGroups.leader', 'members'])->get(); // Eager load relationships
     }
 
     public function getMembersProperty()
@@ -43,7 +45,7 @@ class GroupManagement extends Component
 
     public function editGroup($groupId)
     {
-        $this->editingGroup = Group::with('subGroups')->find($groupId);
+        $this->editingGroup = Department::with('subGroups')->find($groupId);
         $this->showManageModal = true;
     }
 
@@ -67,7 +69,7 @@ class GroupManagement extends Component
             'newGroupType' => 'required|in:Lãnh đạo,Sinh hoạt,Mục vụ',
         ]);
 
-        Group::create([
+        Department::create([
             'name' => $this->newGroupName,
             'type' => $this->newGroupType,
             'description' => $this->newGroupDescription,
@@ -115,7 +117,7 @@ class GroupManagement extends Component
 
     public function deleteGroup($groupId)
     {
-        Group::destroy($groupId);
+        Department::destroy($groupId);
         $this->dispatch('notify', 'Đã xóa Ban/Ngành.');
         $this->showManageModal = false;
     }

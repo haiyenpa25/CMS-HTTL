@@ -8,7 +8,7 @@
 
         {{-- Toolbar / Filters --}}
         <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4 md:p-6 mb-6">
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                 {{-- Department Selector --}}
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2">
@@ -16,11 +16,26 @@
                     </label>
                     <select 
                         wire:model.live="selectedDepartmentId"
-                        class="w-full px-4 py-2.5 border border-gray-300 rounded-lg bg-white text-gray-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
+                        class="w-full px-4 py-2.5 border border-gray-300 rounded-lg bg-white text-gray-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors shadow-sm"
                     >
                         <option value="">-- Chọn Ban ngành --</option>
                         @foreach($departments as $dept)
                         <option value="{{ $dept->id }}">{{ $dept->name }}</option>
+                        @endforeach
+                    </select>
+                </div>
+
+                {{-- Month Selector --}}
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                        Tháng <span class="text-red-500">*</span>
+                    </label>
+                    <select 
+                        wire:model.live="selectedMonth"
+                        class="w-full px-4 py-2.5 border border-gray-300 rounded-lg bg-white text-gray-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors shadow-sm"
+                    >
+                        @foreach($this->availableMonths as $value => $label)
+                            <option value="{{ $value }}">{{ $label }}</option>
                         @endforeach
                     </select>
                 </div>
@@ -32,8 +47,8 @@
                     </label>
                     <select 
                         wire:model.live="selectedSessionId"
-                        {{ !$selectedDepartmentId ? 'disabled' : '' }}
-                        class="w-full px-4 py-2.5 border border-gray-300 rounded-lg bg-white text-gray-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors disabled:bg-gray-100 disabled:cursor-not-allowed"
+                        {{ !$selectedDepartmentId || !$selectedMonth ? 'disabled' : '' }}
+                        class="w-full px-4 py-2.5 border border-gray-300 rounded-lg bg-white text-gray-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors disabled:bg-gray-100 disabled:cursor-not-allowed shadow-sm"
                     >
                         <option value="">-- Chọn buổi nhóm --</option>
                         @foreach($sessions as $session)
@@ -52,7 +67,7 @@
                     <select 
                         wire:model.live="selectedSubGroupId"
                         {{ !$selectedDepartmentId ? 'disabled' : '' }}
-                        class="w-full px-4 py-2.5 border border-gray-300 rounded-lg bg-white text-gray-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors disabled:bg-gray-100 disabled:cursor-not-allowed"
+                        class="w-full px-4 py-2.5 border border-gray-300 rounded-lg bg-white text-gray-900 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors disabled:bg-gray-100 disabled:cursor-not-allowed shadow-sm"
                     >
                         <option value="">-- Chọn Tổ --</option>
                         @foreach($subGroups as $group)
