@@ -17,12 +17,16 @@ class DatabaseSeeder extends Seeder
     {
         require_once __DIR__ . '/MasterDataSeeder.php';
         require_once __DIR__ . '/StandardTestDataSeeder.php';
+        require_once __DIR__ . '/UserAccountSeeder.php';
 
         $this->call([
             // 1. Master Data (Cấu hình hệ thống)
             MasterDataSeeder::class,
 
-            // 2. Test Data (Dữ liệu mẫu 50 người)
+            // 2. User Accounts (Roles, Permissions, Users) - Must run before Test Data if TestData relies on users (it doesn't, but good practice)
+            UserAccountSeeder::class,
+
+            // 3. Test Data (Dữ liệu mẫu 50 người)
             StandardTestDataSeeder::class,
         ]);
 
